@@ -36,7 +36,6 @@ import OnBoardingDialog from '../ui/OnBoardingDialog';
 import TooltipContainer from '../ui/TooltipContainer';
 // import { BeginnerBox } from '../beginnerBox';
 // import { RazerLaptop } from "@xr3ngine/engine/src/templates/devices/prefabs/RazerLaptop";
-import './style.module.scss';
 
 const MobileGamepad = dynamic(() => import("../ui/MobileGampad").then((mod) => mod.MobileGamepad),  { ssr: false });
 
