@@ -52,23 +52,23 @@ const OnBoardingDialog = (props) => {
     switch(onBoardingStep){
       case  generalStateList.SCENE_LOADED : { 
             isOpened=true; dialogText = 'Virtual retail experience'; submitButtonText =  'Enter The World';
-            submitButtonAction = ()=>store.dispatch(setAppOnBoardingStep(generalStateList.AVATAR_SELECTION));
+            submitButtonAction = ()=>store.dispatch(setAppOnBoardingStep(generalStateList.DEVICE_SETUP));
             break;
           }
+      case generalStateList.DEVICE_SETUP: {
+            isOpened = true; dialogText = 'Device Setup'; children =  <UserSettings />; submitButtonText = 'Accept';
+            submitButtonAction = ()=>store.dispatch(setAppOnBoardingStep(generalStateList.AVATAR_SELECTION));
+            break;
+           }    
       case generalStateList.AVATAR_SELECTION: {
             isOpened= true; dialogText = 'Select Your Avatar'; submitButtonText = 'Accept';
             submitButtonAction = ()=>store.dispatch(setAppOnBoardingStep(generalStateList.AVATAR_SELECTED));
             break;
           }  
       case generalStateList.AVATAR_SELECTED: {
-            //createPrefab(PlayerCharacter);
-            store.dispatch(setAppOnBoardingStep(generalStateList.DEVICE_SETUP));            
+            store.dispatch(setAppOnBoardingStep(generalStateList.TUTOR_LOOKAROUND));            
            break;}
-      case generalStateList.DEVICE_SETUP: {
-          isOpened = true; dialogText = 'Device Setup'; children =  <UserSettings />; submitButtonText = 'Accept';
-          submitButtonAction = ()=>store.dispatch(setAppOnBoardingStep(generalStateList.TUTOR_LOOKAROUND));
-          break;
-         }     
+      
       default : {isOpened = false;dialogText = '';submitButtonText = '';submitButtonAction = null;children = null; break;}
     }
   };
