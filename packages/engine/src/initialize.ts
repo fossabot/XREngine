@@ -3,6 +3,7 @@ import _ from 'lodash';
 import { BufferGeometry, Mesh, Object3D, PerspectiveCamera, Scene, AudioListener } from 'three';
 import { acceleratedRaycast, computeBoundsTree } from "three-mesh-bvh";
 import AssetLoadingSystem from './assets/systems/AssetLoadingSystem';
+import { PositionalAudioSystem } from './audio/systems/PositionalAudioSystem';
 import { CameraSystem } from './camera/systems/CameraSystem';
 import { isClient } from './common/functions/isClient';
 import { Timer } from './common/functions/Timer';
@@ -98,6 +99,7 @@ export function initializeEngine(initOptions: any = DefaultInitializationOptions
     Engine.audioListener = listener;
 
     registerSystem(HighlightSystem);
+    registerSystem(PositionalAudioSystem);
     registerSystem(InteractiveSystem);
     // registerSystem(ParticleSystem);
     registerSystem(CameraSystem);
