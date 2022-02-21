@@ -1,6 +1,5 @@
 import { UserId } from '@xrengine/common/src/interfaces/UserId'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
-import type { Network } from '@xrengine/engine/src/networking/classes/Network'
 
 export const Views = {
   Closed: '',
@@ -8,35 +7,11 @@ export const Views = {
   Settings: 'Settings',
   Share: 'Share',
   DeleteAccount: 'accountDelete',
-  Login: 'login',
+  Login: 'Login',
   AvatarUpload: 'AvatarUpload',
   Avatar: 'Avatar',
-  Location: 'Location',
   Emote: 'Emote',
-  NewLocation: 'NewLocation',
-  ReadyPlayer: 'ReadyPlayer',
-  Inventory: 'Inventory',
-  Wallet: 'Wallet',
-  Trading: 'Trading'
-}
-
-export interface UserMenuProps {
-  login?: boolean
-  authState?: any
-  instanceConnectionState?: any
-  locationState?: any
-  updateUserAvatarId?: Function
-  showDialog?: Function
-  alertSuccess?: Function
-  currentScene?: any
-  provisionInstanceServer?: any
-  uploadAvatarModel?: Function
-  fetchAvatarList?: Function
-  updateUserSettings?: Function
-  removeAvatar?: Function
-  getLocations?: Function
-  enableSharing?: boolean
-  hideLogin?: boolean
+  ReadyPlayer: 'ReadyPlayer'
 }
 
 export interface SettingMenuProps {

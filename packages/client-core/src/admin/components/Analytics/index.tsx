@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Card from './CardNumber'
 
 import clsx from 'clsx'
@@ -10,7 +10,6 @@ import createStyles from '@mui/styles/createStyles'
 import Paper from '@mui/material/Paper'
 import UserGraph from './UserGraph'
 import ActivityGraph from './ActivityGraph'
-import { useDispatch } from '../../../store'
 import { useAuthState } from '../../../user/services/AuthService'
 import { useAnalyticsState } from '../../services/AnalyticsService'
 import { AnalyticsService } from '../../services/AnalyticsService'
@@ -74,23 +73,40 @@ const useStyles = makeStyles((theme: Theme) =>
  */
 
 const Analytics = (props: Props) => {
-  const dispatch = useDispatch()
   const [refetch, setRefetch] = useState(false)
   const [graphSelector, setGraphSelector] = useState('activity')
   let isDataAvailable = false
   const analyticsState = useAnalyticsState()
 
-  const activeLocations = analyticsState.activeLocations.value
-  const activeParties = analyticsState.activeParties.value
-  const activeScenes = analyticsState.activeScenes.value
-  const activeInstances = analyticsState.activeInstances.value
-  const instanceUsers = analyticsState.instanceUsers.value
-  const channelUsers = analyticsState.channelUsers.value
-  const dailyUsers = analyticsState.dailyUsers.value
-  const dailyNewUsers = analyticsState.dailyNewUsers.value
+  const activeLocations = analyticsState.activeLocations.value.map((item) => {
+    return [new Date(item.createdAt).getTime(), item.count]
+  })
+  const activeParties = analyticsState.activeParties.value.map((item) => {
+    return [new Date(item.createdAt).getTime(), item.count]
+  })
+  const activeScenes = analyticsState.activeScenes.value.map((item) => {
+    return [new Date(item.createdAt).getTime(), item.count]
+  })
+  const activeInstances = analyticsState.activeInstances.value.map((item) => {
+    return [new Date(item.createdAt).getTime(), item.count]
+  })
+  const instanceUsers = analyticsState.instanceUsers.value.map((item) => {
+    return [new Date(item.createdAt).getTime(), item.count]
+  })
+  const channelUsers = analyticsState.channelUsers.value.map((item) => {
+    return [new Date(item.createdAt).getTime(), item.count]
+  })
+  const dailyUsers = analyticsState.dailyUsers.value.map((item) => {
+    return [new Date(item.createdAt).getTime(), item.count]
+  })
+  const dailyNewUsers = analyticsState.dailyNewUsers.value.map((item) => {
+    return [new Date(item.createdAt).getTime(), item.count]
+  })
 
+  const isMounted = useRef(false)
   const fetchTick = () => {
     setTimeout(() => {
+      if (!isMounted.current) return
       setRefetch(true)
       fetchTick()
     }, 5000)
@@ -165,7 +181,11 @@ const Analytics = (props: Props) => {
   }, [authState.isLoggedIn.value])
 
   useEffect(() => {
+    isMounted.current = true
     fetchTick()
+    return () => {
+      isMounted.current = false
+    }
   }, [])
 
   const classes = useStyles()

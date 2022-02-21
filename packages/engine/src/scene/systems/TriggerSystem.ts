@@ -3,16 +3,16 @@ import { Engine } from '../../ecs/classes/Engine'
 import { defineQuery, getComponent } from '../../ecs/functions/ComponentFunctions'
 import { TriggerVolumeComponent } from '../components/TriggerVolumeComponent'
 import { TriggerDetectedComponent } from '../components/TriggerDetectedComponent'
-import { System } from '../../ecs/classes/System'
 import { PortalComponent } from '../components/PortalComponent'
 import { dispatchLocal } from '../../networking/functions/dispatchFrom'
 import { EngineActions } from '../../ecs/classes/EngineService'
+import { isClient } from '../../common/functions/isClient'
 
 /**
  * @author Hamza Mushtaq <github.com/hamzzam>
  */
 
-export default async function TriggerSystem(world: World): Promise<System> {
+export default async function TriggerSystem(world: World) {
   const triggerCollidedQuery = defineQuery([TriggerDetectedComponent])
   const sceneEntityCaches: any = []
 
@@ -22,27 +22,30 @@ export default async function TriggerSystem(world: World): Promise<System> {
 
       if (getComponent(triggerEntity, PortalComponent)) {
         const portalComponent = getComponent(triggerEntity, PortalComponent)
-        if (Engine.currentWorld.isInPortal) continue
-        dispatchLocal(EngineActions.portalRedirectEvent(portalComponent) as any)
+        if (isClient && portalComponent.redirect) {
+          window.location.href = Engine.publicPath + '/location/' + portalComponent.location
+          continue
+        }
+        world.activePortal = portalComponent
+        dispatchLocal(EngineActions.setTeleporting(true))
+        continue
       }
 
       const triggerComponent = getComponent(triggerEntity, TriggerVolumeComponent)
+      const onEnter = triggerComponent.onEnter
+      if (!onEnter) continue
 
-      const args = triggerComponent.args
-      if (!args) continue
-      const onEnter = args.onEnter
-
-      const filtered = sceneEntityCaches.filter((cache: any) => cache.target == args.target)
+      const filtered = sceneEntityCaches.filter((cache: any) => cache.target == triggerComponent.target)
       let targetObj: any
       console.log(filtered)
       if (filtered.length > 0) {
         const filtedData: any = filtered[0]
         targetObj = filtedData.object
       } else {
-        targetObj = Engine.scene.getObjectByProperty('sceneEntityId', args.target) as any
+        targetObj = world.entityTree.findNodeFromUUID(triggerComponent.target)
         if (targetObj) {
           sceneEntityCaches.push({
-            target: args.target,
+            target: triggerComponent.target,
             object: targetObj
           })
         }
@@ -61,21 +64,18 @@ export default async function TriggerSystem(world: World): Promise<System> {
       const triggerComponent = getComponent(triggerEntity, TriggerVolumeComponent)
 
       if (!triggerCollidedQuery) continue
-      const args = triggerComponent.args
-      if (!args) continue
-      const onExit = args.onExit
+      const onExit = triggerComponent.onExit
 
-      const filtered = sceneEntityCaches.filter((cache: any) => cache.target == args.target)
-      console.log(filtered)
+      const filtered = sceneEntityCaches.filter((cache: any) => cache.target == triggerComponent.target)
       let targetObj: any
       if (filtered.length > 0) {
         const filtedData: any = filtered[0]
         targetObj = filtedData.object
       } else {
-        targetObj = Engine.scene.getObjectByProperty('sceneEntityId', args.target) as any
+        targetObj = world.entityTree.findNodeFromUUID(triggerComponent.target)
         if (targetObj) {
           sceneEntityCaches.push({
-            target: args.target,
+            target: triggerComponent.target,
             object: targetObj
           })
         }

@@ -9,7 +9,9 @@ Getting up and running requires just a few steps, but this can be tricky, depend
 
 You **must** have Node 16 or above installed.
 
-NVM can be a useful tool for this https://github.com/nvm-sh/nvm
+A version manager can be helpful for this:
+ - NodeJS only: [NVM](https://github.com/nvm-sh/nvm)
+ - Polyglot: [ASDF](https://github.com/asdf-vm/asdf)
 
 Before running the engine, please check `node --version`
 If you are using a node version below 16, please update or nothing will work. You will know you are having issues if you try to install at root and are getting dependency errors.
@@ -19,6 +21,54 @@ If you are using a node version below 16, please update or nothing will work. Yo
 You don't need to use Docker, but it will make your life much easier.
 You can get it [here](https://docs.docker.com/).
 If you don't wish to use Docker, you will need to setup mariadb and redis on your machine. You can find credentials in `xrengine/scripts/docker-compose.yml`
+
+## Docker
+
+You can quickstart locally using docker, if you don't have node installed or just want to test the latest.
+
+``` bash
+## Get local IP address
+Use a tool like ifconfig to get your local IP address.
+
+## Start local databases
+cd scripts
+docker-compose up
+
+When the logging stops, that indicates that the databases have been created and are running.
+
+Ctrl+c out of that, then from scripts run ./start-all-docker.sh (This must be run every time
+you start your machine anew)
+
+## Build the image
+DOCKER_BUILDKIT=1 docker build -t xrengine --build-arg MYSQL_USER=server --build-arg MYSQL_PASSWORD=password --build-arg MYSQL_HOST=127.0.0.1 --build-arg MYSQL_DATABASE=xrengine --build-arg MYSQL_PORT=3304 --build-arg VITE_SERVER_HOST=localhost --build-arg VITE_SERVER_PORT=3030 --build-arg VITE_GAMESERVER_HOST=localhost --build-arg VITE_GAMESERVER_PORT=3031 --build-arg VITE_LOCAL_BUILD=true --build-arg CACHE_DATE="$(date)" --network="host" .
+
+## Run the server to seed the database, wait a couple minutes, then delete it
+docker run -d --name server --env-file .env.local.default -e "SERVER_MODE=api" -e "FORCE_DB_REFRESH=true" --network host xrengine
+docker logs server -f
+-Wait for the line "Server Ready", then Ctrl+c out of the logs-
+docker container stop server
+docker container rm server
+
+## Run the images
+docker run -d --name serve-local --env-file .env.local.default -e "SERVER_MODE=serve-local" --network host xrengine
+docker run -d --name server --env-file .env.local.default -e "SERVER_MODE=api" -e "GAMESERVER_HOST=<local IP address" --network host xrengine
+docker run -d --name client --env-file .env.local.default -e "SERVER_MODE=client" --network host xrengine
+docker run -d --name world --env-file .env.local.default -e "SERVER_MODE=realtime" -e "GAMESERVER_HOST=<local IP address>" --network host xrengine
+docker run -d --name channel --env-file .env.local.default -e "SERVER_MODE=realtime" -e "GAMESERVER_HOST=<local IP address>" -e "GAMESERVER_PORT=3032" --network host xrengine
+
+## Delete containers, if you want to run a new build, or just get rid of them
+docker container stop serve-local
+docker container rm serve-local
+docker container stop server
+docker container rm server
+docker container stop client
+docker container rm client
+docker container stop world
+docker container rm world
+docker container stop channel
+docker container rm channel
+
+```
 
 ### Mediasoup is a powerful beast you must tame
 The vast majority of people get stuck on the mediasoup installation because it requires C++ source code to be compiled on your machine, which requires node-gyp and python and other dependencies.
@@ -35,6 +85,8 @@ sudo apt-get update
 sudo apt-get upgrade
 sudo apt-get install build-essential
 npm install
+npm install mediasoup@3 --save
+sudo service docker start
 npm run dev-docker
 npm run dev-reinit
 ```
@@ -98,7 +150,7 @@ This is because on Apple chips the node-darwin sometimes doesn't get installed p
 
 This will open the mariaDB and SQL scripts on the docker and will start the servers 
 
-3. To make sure your environment is set and running properly just go to https://localhost:3000/location/test and you should see the editor 
+3. To make sure your environment is set and running properly just go to https://localhost:3000/location/default and you should be able to walk around an empty 3D scene
 
 ```
 Note : Make sure you are on Node >= 16 and have docker running. 
@@ -134,9 +186,9 @@ npm run dev
 
 This will automatically setup (if necessary) and run redis/mariadb docker containers, and XRengine client/server/game-server instances.
 
-In a browser, navigate to https://127.0.0.1:3000/location/test
+In a browser, navigate to https://127.0.0.1:3000/location/default
 
-The database seeding process creates a test empty location called 'test'. It can be navigated to by going to 'https://127.0.0.1:3000/location/test'
+The database seeding process creates a test empty location called 'test'. It can be navigated to by going to 'https://127.0.0.1:3000/location/default'
 
 As of this writing, the cert provided in the xrengine package for local use is not adequately signed. Browsers will throw up warnings about going to insecure pages. You should be able to tell the browser to ignore it, usually by clicking on some sort of 'advanced options' button or link and then something along the lines of 'go there anyway'.
 
@@ -207,7 +259,7 @@ The default username is 'server', the default password is 'password', the defaul
    At this point, the database has been seeded.
 
 ### 5. Local file server configuration
-   If the .env.local file y ou have has the line 
+   If the .env.local file you have has the line 
    ```STORAGE_PROVIDER=local```
    then the scene editor will save components, models, scenes, etc. locally 
    (as opposed to storing them on S3). You will need to start a local server
@@ -219,15 +271,15 @@ The default username is 'server', the default password is 'password', the defaul
    You may have to accept the invalid self-signed certificate for it in the browser;
    see 'Allow local file http-server connection with invalid certificate' below.
 
-### 6. Open two/three separate tabs and start the API server, gameserverand client
+### 6. Open two/three separate tabs and start the API server, gameserver and client
    In /packages/server, run ```npm run dev``` which will launch the api server, game server and file server.
    If you are not using gameservers, you can instead run ```npm run dev-api-server``` in the api server.
    In the final tab, go to /packages/client and run ```npm run dev```.
    If you are on windows you need to use ```npm run dev-windows``` instead of ```npm run dev```.
 
-### 7. In a browser, navigate to https://127.0.0.1:3000/location/test
-   The database seeding process creates a test empty location called 'test'.
-   It can be navigated to by going to 'https://127.0.0.1:3000/location/test'.
+### 7. In a browser, navigate to https://127.0.0.1:3000/location/default
+   The database seeding process creates a default empty location called 'default'.
+   It can be navigated to by going to 'https://127.0.0.1:3000/location/default'.
 As of this writing, the cert provided in the XREngine package for local use is not adequately signed. You can create signed certificates and replace the default ones, but most developers just ignore the warnings. Browsers will throw up warnings about going to insecure pages. You should be able to tell the browser to ignore it, usually by clicking on some sort of 'advanced options' button or link and then something along the lines of 'go there anyway'.
 
 ### Admin System
@@ -238,7 +290,7 @@ How to make a user an admin:
 Create a user at `/login`
 
 To locate your User ID:
-In Chrome Dev Tools, write `UserId`. This will display your User ID (As shown in attached screenshot). Copy this user Id as string run it as following command in shell:
+In Chrome Dev Tools console, write `copy(userId)`. This will copy your User ID (As shown in attached screenshot). Paste it in and run the following command in a 'nix shell (e.g. Bash, ZSH):
 
 `npm run make-user-admin -- --id={COPIED_USER_ID}`
 
@@ -247,13 +299,9 @@ Example:
 
 ![image](https://user-images.githubusercontent.com/43248658/142813912-35f450e1-f012-4bdf-adfa-f0fa2816160f.png)
 
-
-Method 1: 
-
-1. Run `npm run make-user-admin -- --id=[USER ID]` 
 2. TODO: Improve with email/phone ID support
 
-Method 2: 
+Alternate Method: 
 1. Look up in User table and change userRole to 'admin' 
 2. Dev DB credentials can be found here: packages/ops/docker-compose-local.yml#L42
 3. Suggested: beekeeperstudio.io

@@ -9,7 +9,9 @@ import { WeightsParameterType, AvatarAnimations, AvatarStates } from '@xrengine/
 import { AnimationGraph } from '@xrengine/engine/src/avatar/animations/AnimationGraph'
 import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 
-const EmoteMenu = (props: any): any => {
+type Props = { changeActiveMenu: (menu: any) => {} }
+
+const EmoteMenu = (props: Props): any => {
   const MAX_EMOTE_PER_PAGE = 6
   const MIN_EMOTE_PER_PAGE = 5
 
@@ -127,7 +129,7 @@ const EmoteMenu = (props: any): any => {
   }
 
   const renderEmoteList = () => {
-    const itemList = []
+    const itemList = [] as JSX.Element[]
     const startIndex = page * imgPerPage
     const endIndex = Math.min(startIndex + imgPerPage, items.length)
     let angle = 360 / imgPerPage

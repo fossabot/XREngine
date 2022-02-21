@@ -1,9 +1,10 @@
-import { Sequelize, DataTypes } from 'sequelize'
+import { Sequelize, DataTypes, Model } from 'sequelize'
 import { Application } from '../../../declarations'
+import { IdentityProviderInterface } from '@xrengine/common/src/dbmodels/IdentityProvider'
 
 export default (app: Application) => {
   const sequelizeClient: Sequelize = app.get('sequelizeClient')
-  const identityProvider = sequelizeClient.define(
+  const identityProvider = sequelizeClient.define<Model<IdentityProviderInterface>>(
     'identity_provider',
     {
       id: {
@@ -12,7 +13,7 @@ export default (app: Application) => {
         allowNull: false,
         primaryKey: true
       },
-      token: { type: DataTypes.STRING },
+      token: { type: DataTypes.STRING, unique: true },
       password: { type: DataTypes.STRING },
       isVerified: { type: DataTypes.BOOLEAN },
       verifyToken: { type: DataTypes.STRING },
@@ -24,9 +25,9 @@ export default (app: Application) => {
       type: {
         type: DataTypes.STRING,
         allowNull: false,
-        values: ['email', 'sms', 'password', 'github', 'google', 'facebook', 'twitter', 'linkedin', 'auth0']
+        values: ['email', 'sms', 'password', 'discord', 'github', 'google', 'facebook', 'twitter', 'linkedin', 'auth0']
       }
-    },
+    } as any as IdentityProviderInterface,
     {
       hooks: {
         beforeCount(options: any): void {

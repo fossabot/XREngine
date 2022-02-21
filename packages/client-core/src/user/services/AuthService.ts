@@ -1,38 +1,31 @@
-import { resolveAuthUser } from '@xrengine/common/src/interfaces/AuthUser'
-import { IdentityProvider } from '@xrengine/common/src/interfaces/IdentityProvider'
-import { resolveUser, resolveWalletUser } from '@xrengine/common/src/interfaces/User'
+import { createState, Downgraded, useState } from '@speigg/hookstate'
+import { validateEmail, validatePhoneNumber } from '@xrengine/common/src/config'
+import { AuthUser, AuthUserSeed, resolveAuthUser } from '@xrengine/common/src/interfaces/AuthUser'
+import { AvatarInterface } from '@xrengine/common/src/interfaces/AvatarInterface'
+import { IdentityProvider, IdentityProviderSeed } from '@xrengine/common/src/interfaces/IdentityProvider'
+import { AssetUploadType } from '@xrengine/common/src/interfaces/UploadAssetInterface'
+import { resolveUser, resolveWalletUser, User, UserSeed, UserSetting } from '@xrengine/common/src/interfaces/User'
+import { UserApiKey } from '@xrengine/common/src/interfaces/UserApiKey'
+import { UserAvatar } from '@xrengine/common/src/interfaces/UserAvatar'
+import { isDev } from '@xrengine/common/src/utils/isDev'
+import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { Network } from '@xrengine/engine/src/networking/classes/Network'
 import { MessageTypes } from '@xrengine/engine/src/networking/enums/MessageTypes'
+import { dispatchFrom } from '@xrengine/engine/src/networking/functions/dispatchFrom'
+import { NetworkWorldAction } from '@xrengine/engine/src/networking/functions/NetworkWorldAction'
 // TODO: Decouple this
 // import { endVideoChat, leave } from '@xrengine/engine/src/networking/functions/SocketWebRTCClientFunctions';
 import axios from 'axios'
-import { isDev } from '@xrengine/common/src/utils/isDev'
-
 import querystring from 'querystring'
-import { store, useDispatch } from '../../store'
 import { v1 } from 'uuid'
+import { AlertService } from '../../common/services/AlertService'
 import { client } from '../../feathers'
-import { validateEmail, validatePhoneNumber, Config } from '@xrengine/common/src/config'
-import { Engine } from '@xrengine/engine/src/ecs/classes/Engine'
 import { accessLocationState } from '../../social/services/LocationService'
 import { accessPartyState } from '../../social/services/PartyService'
-import { AlertService } from '../../common/services/AlertService'
-
-import { AuthUser } from '@xrengine/common/src/interfaces/AuthUser'
-import { User, UserSetting } from '@xrengine/common/src/interfaces/User'
-import { AvatarInterface } from '@xrengine/common/src/interfaces/AvatarInterface'
-
-import { createState, useState, Downgraded } from '@hookstate/core'
-import { UserSeed } from '@xrengine/common/src/interfaces/User'
-import { IdentityProviderSeed } from '@xrengine/common/src/interfaces/IdentityProvider'
-import { AuthUserSeed } from '@xrengine/common/src/interfaces/AuthUser'
-import { UserAvatar } from '@xrengine/common/src/interfaces/UserAvatar'
+import { store, useDispatch } from '../../store'
+import { SocketWebRTCClientTransport } from '../../transports/SocketWebRTCClientTransport'
 import { accessStoredLocalState, StoredLocalAction, StoredLocalActionType } from '../../util/StoredLocalState'
-import { AssetUploadType } from '@xrengine/common/src/interfaces/UploadAssetInterface'
 import { userPatched } from '../functions/userPatched'
-import { dispatchFrom } from '@xrengine/engine/src/networking/functions/dispatchFrom'
-import { NetworkWorldAction } from '@xrengine/engine/src/networking/functions/NetworkWorldAction'
-import { SocketWebRTCClientTransport } from 'src/transports/SocketWebRTCClientTransport'
 
 type AuthStrategies = {
   jwt: Boolean
@@ -114,6 +107,9 @@ store.receptors.push((action: AuthActionType | StoredLocalActionType): void => {
       case 'USERNAME_UPDATED': {
         return s.user.merge({ name: action.name })
       }
+      case 'USER_API_KEY_UPDATED': {
+        return s.user.merge({ apiKey: action.apiKey })
+      }
       case 'USERAVATARID_UPDATED': {
         return s.user.merge({ avatarId: action.avatarId })
       }
@@ -142,7 +138,15 @@ accessAuthState().attach(() => ({
     onSet(arg) {
       const state = accessAuthState().attach(Downgraded).value
       const dispatch = useDispatch()
-      if (state.isLoggedIn) dispatch(StoredLocalAction.storedLocal({ authData: state }))
+      if (state.isLoggedIn)
+        dispatch(
+          StoredLocalAction.storedLocal({
+            authData: {
+              authUser: state.authUser,
+              identityProvider: state.identityProvider
+            }
+          })
+        )
     }
   })
 }))
@@ -321,23 +325,27 @@ export const AuthService = {
       }
     }
   },
-  loginUserByOAuth: async (service: string) => {
+  loginUserByOAuth: async (service: string, location: any) => {
     const dispatch = useDispatch()
+    const serverHost =
+      process.env.APP_ENV === 'development'
+        ? `https://${(globalThis as any).process.env['VITE_SERVER_HOST']}:${
+            (globalThis as any).process.env['VITE_SERVER_PORT']
+          }`
+        : `https://${(globalThis as any).process.env['VITE_SERVER_HOST']}`
     {
       dispatch(AuthAction.actionProcessing(true))
       const token = accessAuthState().authUser.accessToken.value
-      const path = window.location.pathname
+      const path = location?.state?.from || location.pathname
       const queryString = querystring.parse(window.location.search.slice(1))
       const redirectObject = {
         path: path
       } as any
       if (queryString.instanceId && queryString.instanceId.length > 0)
         redirectObject.instanceId = queryString.instanceId
-      let redirectUrl = `${
-        Config.publicRuntimeConfig.apiServer
-      }/oauth/${service}?feathers_token=${token}&redirect=${JSON.stringify(redirectObject)}`
-
-      window.location.href = redirectUrl
+      window.location.href = `${serverHost}/oauth/${service}?feathers_token=${token}&redirect=${JSON.stringify(
+        redirectObject
+      )}`
     }
   },
   loginUserByJwt: async (accessToken: string, redirectSuccess: string, redirectError: string) => {
@@ -621,10 +629,16 @@ export const AuthService = {
         .finally(() => dispatch(AuthAction.actionProcessing(false)))
     }
   },
-  addConnectionByOauth: async (oauth: 'facebook' | 'google' | 'github' | 'linkedin' | 'twitter', userId: string) => {
+  addConnectionByOauth: async (
+    oauth: 'facebook' | 'google' | 'github' | 'linkedin' | 'twitter' | 'discord',
+    userId: string
+  ) => {
     const dispatch = useDispatch()
     {
-      window.open(`${Config.publicRuntimeConfig.apiServer}/auth/oauth/${oauth}?userId=${userId}`, '_blank')
+      window.open(
+        `https://${globalThis.process.env['VITE_SERVER_HOST']}/auth/oauth/${oauth}?userId=${userId}`,
+        '_blank'
+      )
     }
   },
   removeConnection: async (identityProviderId: number, userId: string) => {
@@ -657,7 +671,7 @@ export const AuthService = {
     {
       const token = accessAuthState().authUser.accessToken.value
       const selfUser = accessAuthState().user
-      const res = await axios.post(`${Config.publicRuntimeConfig.apiServer}/upload`, data, {
+      const res = await axios.post(`https://${globalThis.process.env['VITE_SERVER_HOST']}/upload`, data, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: 'Bearer ' + token
@@ -706,7 +720,7 @@ export const AuthService = {
         })
     }
   },
-  removeAvatar: async (keys: [string]) => {
+  removeAvatar: async (keys: string) => {
     const dispatch = useDispatch()
     {
       await client
@@ -792,6 +806,36 @@ export const AuthService = {
       })
       AuthService.logoutUser()
     }
+  },
+
+  updateApiKey: async () => {
+    const dispatch = useDispatch()
+    const apiKey = await client.service('user-api-key').patch()
+    dispatch(AuthAction.apiKeyUpdated(apiKey))
+  },
+  listenForUserPatch: () => {
+    console.log('listenForUserPatch')
+    client.service('user').on('patched', (params) => useDispatch()(AuthAction.userPatched(params)))
+    client.service('location-ban').on('created', async (params) => {
+      const selfUser = accessAuthState().user
+      const party = accessPartyState().party.value
+      const selfPartyUser =
+        party && party.partyUsers
+          ? party.partyUsers.find((partyUser) => partyUser.id === selfUser.id.value)
+          : ({} as any)
+      const currentLocation = accessLocationState().currentLocation.location
+      const locationBan = params.locationBan
+      if (selfUser.id.value === locationBan.userId && currentLocation.id.value === locationBan.locationId) {
+        // TODO: Decouple and reenable me!
+        // endVideoChat({ leftParty: true });
+        // leave(true);
+        if (selfPartyUser != undefined && selfPartyUser?.id != null) {
+          await client.service('party-user').remove(selfPartyUser.id)
+        }
+        const user = resolveUser(await client.service('user').get(selfUser.id.value))
+        store.dispatch(AuthAction.userUpdated(user))
+      }
+    })
   }
 }
 
@@ -804,28 +848,6 @@ const parseUserWalletCredentials = (wallet) => {
       // session // this will contain the access token and helper methods
     }
   }
-}
-
-if (!Config.publicRuntimeConfig.offlineMode) {
-  client.service('user').on('patched', (params) => useDispatch()(AuthAction.userPatched(params)))
-  client.service('location-ban').on('created', async (params) => {
-    const selfUser = accessAuthState().user
-    const party = accessPartyState().party.value
-    const selfPartyUser =
-      party && party.partyUsers ? party.partyUsers.find((partyUser) => partyUser.id === selfUser.id.value) : ({} as any)
-    const currentLocation = accessLocationState().currentLocation.location
-    const locationBan = params.locationBan
-    if (selfUser.id.value === locationBan.userId && currentLocation.id.value === locationBan.locationId) {
-      // TODO: Decouple and reenable me!
-      // endVideoChat({ leftParty: true });
-      // leave(true);
-      if (selfPartyUser != undefined && selfPartyUser?.id != null) {
-        await client.service('party-user').remove(selfPartyUser.id)
-      }
-      const user = resolveUser(await client.service('user').get(selfUser.id.value))
-      store.dispatch(AuthAction.userUpdated(user))
-    }
-  })
 }
 
 // Action
@@ -953,7 +975,6 @@ export const AuthAction = {
     }
   },
   avatarUpdated: (result: any) => {
-    debugger
     const url = result.url
     return {
       type: 'AVATAR_UPDATED' as const,
@@ -990,6 +1011,12 @@ export const AuthAction = {
     return {
       type: 'AVATAR_FETCHED' as const,
       avatarList
+    }
+  },
+  apiKeyUpdated: (apiKey: UserApiKey) => {
+    return {
+      type: 'USER_API_KEY_UPDATED' as const,
+      apiKey: apiKey
     }
   }
 }

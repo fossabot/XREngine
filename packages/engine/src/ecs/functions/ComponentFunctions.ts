@@ -1,14 +1,13 @@
 import * as bitECS from 'bitecs'
+import { ISchema, ArrayByType, Type } from 'bitecs'
 import { Entity } from '../classes/Entity'
 import { useWorld } from './SystemHooks'
 
 export const ComponentMap = new Map<string, ComponentType<any>>()
+globalThis.ComponentMap = ComponentMap
 
 // TODO: benchmark map vs array for componentMap
-export const createMappedComponent = <T extends {}, S extends bitECS.ISchema = bitECS.ISchema>(
-  name: string,
-  schema?: S
-) => {
+export const createMappedComponent = <T, S extends bitECS.ISchema = {}>(name: string, schema?: S) => {
   const component = bitECS.defineComponent(schema)
   const componentMap = new Map<number, T & SoAProxy<S>>()
   // const componentMap = []
@@ -62,7 +61,7 @@ export const createMappedComponent = <T extends {}, S extends bitECS.ISchema = b
 
   ComponentMap.set(name, component)
 
-  return component as T & MappedComponent<T, S>
+  return component as MappedComponent<T, S>
 }
 
 export type SoAProxy<S extends bitECS.ISchema> = {
@@ -77,7 +76,19 @@ export type SoAProxy<S extends bitECS.ISchema> = {
     : unknown
 }
 
-export type MappedComponent<T, S extends bitECS.ISchema> = bitECS.ComponentType<S> & {
+export type SoAComponentType<T extends ISchema> = {
+  [key in keyof T]: T[key] extends Type
+    ? ArrayByType[T[key]]
+    : T[key] extends [infer RT, number]
+    ? RT extends Type
+      ? Array<ArrayByType[RT]>
+      : never
+    : T[key] extends ISchema
+    ? SoAComponentType<T[key]>
+    : never
+}
+
+export type MappedComponent<T, S extends bitECS.ISchema> = SoAComponentType<S> & {
   get: (entity: number) => T & SoAProxy<S>
   set: (entity: number, value: T & SoAProxy<S>) => void
   delete: (entity: number) => void
@@ -93,7 +104,7 @@ export const getComponent = <T, S extends bitECS.ISchema>(
   getRemoved = false,
   world = useWorld()
 ): T & SoAProxy<S> => {
-  if (typeof entity === 'undefined') {
+  if (typeof entity === 'undefined' || entity === null) {
     throw new Error('[getComponent]: entity is undefined')
   }
   if (bitECS.hasComponent(world, component, entity) || getRemoved) return component.get(entity)
@@ -106,11 +117,11 @@ export const addComponent = <T, S extends bitECS.ISchema>(
   args: T & Partial<SoAProxy<S>>,
   world = useWorld()
 ) => {
-  if (typeof entity === 'undefined') {
+  if (typeof entity === 'undefined' || entity === null) {
     throw new Error('[addComponent]: entity is undefined')
   }
   if (hasComponent(entity, component)) throw new Error('component already exists' + entity + component._name)
-  bitECS.addComponent(world, component, entity)
+  bitECS.addComponent(world, component, entity, false) // don't clear data on-add
   if ((component as any)._schema) {
     for (const [key] of Object.entries((component as any)._schema as any)) {
       component[key][entity] = args[key]
@@ -125,7 +136,7 @@ export const hasComponent = <T, S extends bitECS.ISchema>(
   component: MappedComponent<T, S>,
   world = useWorld()
 ) => {
-  if (typeof entity === 'undefined') {
+  if (typeof entity === 'undefined' || entity === null) {
     throw new Error('[hasComponent]: entity is undefined')
   }
   return bitECS.hasComponent(world, component, entity)
@@ -136,10 +147,22 @@ export const removeComponent = <T, S extends bitECS.ISchema>(
   component: MappedComponent<T, S>,
   world = useWorld()
 ) => {
-  if (typeof entity === 'undefined') {
+  if (typeof entity === 'undefined' || entity === null) {
     throw new Error('[removeComponent]: entity is undefined')
   }
-  bitECS.removeComponent(world, component, entity)
+  bitECS.removeComponent(world, component, entity, true) // clear data on-remove
+}
+
+export const getAllComponents = (entity: Entity, world = useWorld()): ComponentConstructor<any, any>[] => {
+  return bitECS.getEntityComponents(world, entity) as ComponentConstructor<any, any>[]
+}
+
+export const getComponentCountOfType = <T, S extends bitECS.ISchema>(
+  component: MappedComponent<T, S>,
+  world = useWorld()
+): number => {
+  const query = defineQuery([component])
+  return query(world).length
 }
 
 export const getAllComponentsOfType = <T, S extends bitECS.ISchema>(
@@ -153,17 +176,13 @@ export const getAllComponentsOfType = <T, S extends bitECS.ISchema>(
   })
 }
 
-export const getAllEntitiesWithComponent = <T, S extends bitECS.ISchema>(
-  component: MappedComponent<T, S>,
-  world = useWorld()
-): Entity[] => {
-  const query = defineQuery([component])
-  return query(world)
-}
-
 export const removeAllComponents = (entity: Entity, world = useWorld()) => {
-  for (const component of bitECS.getEntityComponents(world, entity)) {
-    removeComponent(entity, component as MappedComponent<any, any>, world)
+  try {
+    for (const component of bitECS.getEntityComponents(world, entity)) {
+      removeComponent(entity, component as MappedComponent<any, any>, world)
+    }
+  } catch (_) {
+    console.warn('Components of entity already removed')
   }
 }
 

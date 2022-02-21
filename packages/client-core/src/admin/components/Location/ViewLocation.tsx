@@ -1,37 +1,35 @@
-import React from 'react'
-import { useTranslation } from 'react-i18next'
-import Drawer from '@mui/material/Drawer'
-import { useLocationStyles, useLocationStyle } from './styles'
-import Paper from '@mui/material/Paper'
-import Container from '@mui/material/Container'
-import Typography from '@mui/material/Typography'
-import Chip from '@mui/material/Chip'
+import { Save } from '@mui/icons-material'
+import MuiAlert from '@mui/material/Alert'
 import Avatar from '@mui/material/Avatar'
-import Grid from '@mui/material/Grid'
-import DialogActions from '@mui/material/DialogActions'
 import Button from '@mui/material/Button'
-import InputBase from '@mui/material/InputBase'
-import { Edit, Save } from '@mui/icons-material'
+import Chip from '@mui/material/Chip'
+import Container from '@mui/material/Container'
+import DialogActions from '@mui/material/DialogActions'
+import Drawer from '@mui/material/Drawer'
 import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import MenuItem from '@mui/material/MenuItem'
-import Select from '@mui/material/Select'
 import FormGroup from '@mui/material/FormGroup'
+import Grid from '@mui/material/Grid'
+import InputBase from '@mui/material/InputBase'
+import MenuItem from '@mui/material/MenuItem'
+import Paper from '@mui/material/Paper'
+import Select from '@mui/material/Select'
 import Switch from '@mui/material/Switch'
-import { useSceneState } from '../../services/SceneService'
+import Typography from '@mui/material/Typography'
+import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDispatch } from '../../../store'
-import { useLocationState } from '../../services/LocationService'
-import { validateUserForm } from '../Users/validation'
-import { LocationService } from '../../services/LocationService'
-import MuiAlert from '@mui/material/Alert'
-import Snackbar from '@mui/material/Snackbar'
 import { useAuthState } from '../../../user/services/AuthService'
+import AlertMessage from '../../common/AlertMessage'
+import { validateForm } from '../../common/validation/formValidation'
+import { LocationService, useLocationState } from '../../services/LocationService'
+import { useSceneState } from '../../services/SceneService'
+import { useStyles } from '../../styles/ui'
 
 interface Props {
   openView: any
   closeViewModel: any
   locationAdmin: any
-
   authState?: any
 }
 
@@ -42,8 +40,7 @@ const Alert = (props) => {
 const ViewLocation = (props: Props) => {
   const { openView, closeViewModel, locationAdmin } = props
   const dispatch = useDispatch()
-  const classex = useLocationStyle()
-  const classes = useLocationStyles()
+  const classes = useStyles()
   const [editMode, setEditMode] = React.useState(false)
   const [state, setState] = React.useState({
     name: '',
@@ -154,7 +151,7 @@ const ViewLocation = (props: Props) => {
       temp.scene = "Type can't be empty"
     }
     setState({ ...state, formErrors: temp })
-    if (validateUserForm(state, state.formErrors)) {
+    if (validateForm(state, state.formErrors)) {
       LocationService.patchLocation(location.id, locationData)
       setState({
         ...state,
@@ -171,7 +168,7 @@ const ViewLocation = (props: Props) => {
     }
   }
 
-  const handleCloseWarning = (event, reason) => {
+  const handleCloseWarning = (event?: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') {
       return
     }
@@ -187,29 +184,36 @@ const ViewLocation = (props: Props) => {
 
   return (
     <React.Fragment>
-      <Drawer anchor="right" open={openView} onClose={() => handleCloseDrawe()} classes={{ paper: classex.paper }}>
+      <Drawer
+        anchor="right"
+        open={openView}
+        onClose={() => handleCloseDrawe()}
+        classes={{ paper: classes.paperDrawer }}
+      >
         <Paper elevation={0} className={classes.rootPaper}>
-          <Container maxWidth="sm">
-            <div className={classes.locationTitle}>
-              <Typography variant="h4" component="span">
-                {location?.name}
-              </Typography>
-            </div>
-            <div className={classes.locationSubTitle}>
-              {location.isFeatured && (
-                <Chip
-                  style={{ marginLeft: '5px' }}
-                  avatar={<Avatar>F</Avatar>}
-                  label={t('admin:components.index.featured')}
-                  //  onClick={handleClick}
-                />
-              )}
-              {location.isLobby && <Chip avatar={<Avatar>L</Avatar>} label={t('admin:components.index.lobby')} />}
-              {/* <Paper className={classes.smpd} elevation={0}>
+          {location && (
+            <Container maxWidth="sm">
+              <div className={classes.locationTitle}>
+                <Typography variant="h4" component="span">
+                  {location?.name}
+                </Typography>
+              </div>
+              <div className={classes.locationSubTitle}>
+                {location.isFeatured && (
+                  <Chip
+                    style={{ marginLeft: '5px' }}
+                    avatar={<Avatar>F</Avatar>}
+                    label={t('admin:components.index.featured')}
+                    //  onClick={handleClick}
+                  />
+                )}
+                {location.isLobby && <Chip avatar={<Avatar>L</Avatar>} label={t('admin:components.index.lobby')} />}
+                {/* <Paper className={classes.smpd} elevation={0}>
                         <Typography variant="h6" component="span" >{location.createdAt ? `Created At: ${location.createdAt.slice(0, 10)}`:""}</Typography>
                         </Paper> */}
-            </div>
-          </Container>
+              </div>
+            </Container>
+          )}
         </Paper>
 
         {editMode ? (
@@ -265,7 +269,7 @@ const ViewLocation = (props: Props) => {
                     onChange={handleInputChange}
                     className={classes.select}
                     name="scene"
-                    MenuProps={{ classes: { paper: classex.selectPaper } }}
+                    MenuProps={{ classes: { paper: classes.selectPaper } }}
                   >
                     <MenuItem value="" disabled>
                       <em>Select scene</em>
@@ -288,7 +292,7 @@ const ViewLocation = (props: Props) => {
                     onChange={handleInputChange}
                     className={classes.select}
                     name="type"
-                    MenuProps={{ classes: { paper: classex.selectPaper } }}
+                    MenuProps={{ classes: { paper: classes.selectPaper } }}
                   >
                     <MenuItem value="" disabled>
                       <em>Select type</em>
@@ -314,7 +318,7 @@ const ViewLocation = (props: Props) => {
                             name="videoEnabled"
                           />
                         }
-                        label={t('admin:components.locationModel.lbl-ve')}
+                        label={t('admin:components.locationModel.lbl-ve') as string}
                       />
                     </FormControl>
                   </FormGroup>
@@ -329,7 +333,7 @@ const ViewLocation = (props: Props) => {
                             name="audioEnabled"
                           />
                         }
-                        label={t('admin:components.locationModel.lbl-ae')}
+                        label={t('admin:components.locationModel.lbl-ae') as string}
                       />
                     </FormControl>
                   </FormGroup>
@@ -344,7 +348,7 @@ const ViewLocation = (props: Props) => {
                             name="globalMediaEnabled"
                           />
                         }
-                        label={t('admin:components.locationModel.lbl-gme')}
+                        label={t('admin:components.locationModel.lbl-gme') as string}
                       />
                     </FormControl>
                   </FormGroup>
@@ -359,7 +363,7 @@ const ViewLocation = (props: Props) => {
                             name="screenSharingEnabled"
                           />
                         }
-                        label={t('admin:components.locationModel.lbl-se')}
+                        label={t('admin:components.locationModel.lbl-se') as string}
                       />
                     </FormControl>
                   </FormGroup>
@@ -377,7 +381,7 @@ const ViewLocation = (props: Props) => {
                               name="faceStreamingEnabled"
                             />
                           }
-                          label={t('admin:components.locationModel.lbl-fe')}
+                          label={t('admin:components.locationModel.lbl-fe') as string}
                         />
                       </FormControl>
                     </FormGroup>
@@ -392,7 +396,7 @@ const ViewLocation = (props: Props) => {
                               name="isLobby"
                             />
                           }
-                          label={t('admin:components.locationModel.lbl-lobby')}
+                          label={t('admin:components.locationModel.lbl-lobby') as string}
                         />
                       </FormControl>
                     </FormGroup>
@@ -407,7 +411,7 @@ const ViewLocation = (props: Props) => {
                               name="isFeatured"
                             />
                           }
-                          label={t('admin:components.locationModel.lbl-featured')}
+                          label={t('admin:components.locationModel.lbl-featured') as string}
                         />
                       </FormControl>
                     </FormGroup>
@@ -539,17 +543,7 @@ const ViewLocation = (props: Props) => {
             </div>
           )}
         </DialogActions>
-        <Snackbar
-          open={openWarning}
-          autoHideDuration={6000}
-          onClose={handleCloseWarning}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        >
-          <Alert onClose={handleCloseWarning} severity="warning">
-            {' '}
-            {error}{' '}
-          </Alert>
-        </Snackbar>
+        <AlertMessage open={openWarning} handleClose={handleCloseWarning} severity="warning" message={error} />
       </Drawer>
     </React.Fragment>
   )

@@ -1,6 +1,7 @@
 import { Params } from '@feathersjs/feathers/lib'
 import { Service, SequelizeServiceOptions } from 'feathers-sequelize'
 import { Application } from '../../../declarations'
+import { extractLoggedInUserFromParams } from '../../user/auth-management/auth-management.utils'
 
 export class Authentication extends Service {
   app: Application
@@ -10,26 +11,50 @@ export class Authentication extends Service {
     this.app = app
   }
 
-  async find(params: Params): Promise<any> {
+  async find(params?: Params): Promise<any> {
     const auth = (await super.find()) as any
+    const loggedInUser = extractLoggedInUserFromParams(params)
     const data = auth.data.map((el) => {
-      return {
+      if (loggedInUser.userRole !== 'admin')
+        return {
+          id: el.id,
+          entity: el.entity,
+          service: el.service,
+          authStrategies: JSON.parse(JSON.parse(el.authStrategies))
+        }
+      let oauth = JSON.parse(el.oauth)
+      let authStrategies = JSON.parse(el.authStrategies)
+      let local = JSON.parse(el.local)
+      let jwtOptions = JSON.parse(el.jwtOptions)
+      let bearerToken = JSON.parse(el.bearerToken)
+      let callback = JSON.parse(el.callback)
+
+      if (typeof oauth === 'string') oauth = JSON.parse(oauth)
+      if (typeof authStrategies === 'string') authStrategies = JSON.parse(authStrategies)
+      if (typeof local === 'string') local = JSON.parse(local)
+      if (typeof jwtOptions === 'string') jwtOptions = JSON.parse(jwtOptions)
+      if (typeof bearerToken === 'string') bearerToken = JSON.parse(bearerToken)
+      if (typeof callback === 'string') callback = JSON.parse(callback)
+
+      const returned = {
         ...el,
-        authStrategies: JSON.parse(JSON.parse(el.authStrategies)),
-        local: JSON.parse(JSON.parse(el.local)),
-        jwtOptions: JSON.parse(JSON.parse(el.jwtOptions)),
-        bearerToken: JSON.parse(JSON.parse(el.bearerToken)),
-        callback: JSON.parse(JSON.parse(el.callback)),
+        authStrategies: authStrategies,
+        local: local,
+        jwtOptions: jwtOptions,
+        bearerToken: bearerToken,
+        callback: callback,
         oauth: {
-          ...JSON.parse(JSON.parse(el.oauth)),
-          defaults: JSON.parse(JSON.parse(JSON.parse(el.oauth)).defaults),
-          facebook: JSON.parse(JSON.parse(JSON.parse(el.oauth)).facebook),
-          github: JSON.parse(JSON.parse(JSON.parse(el.oauth)).github),
-          google: JSON.parse(JSON.parse(JSON.parse(el.oauth)).google),
-          linkedin: JSON.parse(JSON.parse(JSON.parse(el.oauth)).linkedin),
-          twitter: JSON.parse(JSON.parse(JSON.parse(el.oauth)).twitter)
+          ...oauth
         }
       }
+      if (oauth.defaults) returned.oauth.defaults = JSON.parse(oauth.defaults)
+      if (oauth.discord) returned.oauth.discord = JSON.parse(oauth.discord)
+      if (oauth.facebook) returned.oauth.facebook = JSON.parse(oauth.facebook)
+      if (oauth.github) returned.oauth.github = JSON.parse(oauth.github)
+      if (oauth.google) returned.oauth.google = JSON.parse(oauth.google)
+      if (oauth.linkedin) returned.oauth.linkedin = JSON.parse(oauth.linkedin)
+      if (oauth.twitter) returned.oauth.twitter = JSON.parse(oauth.twitter)
+      return returned
     })
     return {
       total: auth.total,

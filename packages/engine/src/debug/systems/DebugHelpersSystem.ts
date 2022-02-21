@@ -29,7 +29,6 @@ import { TransformComponent } from '../../transform/components/TransformComponen
 import { DebugArrowComponent } from '../DebugArrowComponent'
 import { DebugRenderer } from './DebugRenderer'
 import { DebugNavMeshComponent } from '../DebugNavMeshComponent'
-import { System } from '../../ecs/classes/System'
 import { World } from '../../ecs/classes/World'
 import { isStaticBody } from '../../physics/classes/Physics'
 import { EngineEvents } from '../../ecs/classes/EngineEvents'
@@ -44,7 +43,7 @@ const quat = new Quaternion()
 const cubeGeometry = new ConeBufferGeometry(0.05, 0.25, 4)
 cubeGeometry.rotateX(-Math.PI * 0.5)
 
-export default async function DebugHelpersSystem(world: World): Promise<System> {
+export default async function DebugHelpersSystem(world: World) {
   const helpersByEntity: Record<ComponentHelpers, Map<Entity, any>> = {
     viewVector: new Map(),
     ikExtents: new Map(),
@@ -116,26 +115,11 @@ export default async function DebugHelpersSystem(world: World): Promise<System> 
       console.log(helper)
     }
     for (const entity of ikDebugQuery.exit()) {
-      const ikobj = getComponent(entity, IKObj)
+      const ikobj = getComponent(entity, IKObj, true)
       const helper = (ikobj.ref as any).helper
       ikobj.ref.remove(helper)
     }
     for (const entity of avatarDebugQuery.enter()) {
-      const avatar = getComponent(entity, AvatarComponent)
-
-      // view vector
-      const origin = new Vector3(0, 2, 0)
-      const length = 0.5
-      const hex = 0xffff00
-      if (!avatar || !avatar.viewVector) {
-        console.warn('avatar.viewVector is null')
-        continue
-      }
-      // const arrowHelper = new ArrowHelper(avatar.viewVector.clone().normalize(), origin, length, hex)
-      // arrowHelper.visible = avatarDebugEnabled
-      // Engine.scene.add(arrowHelper)
-      // helpersByEntity.viewVector.set(entity, arrowHelper)
-
       // velocity
       const velocityColor = 0x0000ff
       const velocityArrowHelper = new ArrowHelper(new Vector3(), new Vector3(0, 0, 0), 0.5, velocityColor)

@@ -3,12 +3,12 @@
  */
 import { AlertService } from '../../common/services/AlertService'
 import { useDispatch } from '../../store'
-import { createState, useState } from '@hookstate/core'
+import { createState, useState } from '@speigg/hookstate'
 import { store } from '../../store'
 
 //State
 const state = createState({
-  webxrnative: null
+  webxrnative: false
 })
 
 store.receptors.push((action: WebxrNativeActionType): any => {

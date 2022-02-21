@@ -3,20 +3,17 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Grid from '@mui/material/Grid'
 import { Theme } from '@mui/material/styles'
-import makeStyles from '@mui/styles/makeStyles'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
+import makeStyles from '@mui/styles/makeStyles'
 import { ConfirmProvider } from 'material-ui-confirm'
 import React, { useEffect } from 'react'
-import { InviteService } from '../../../social/services/InviteService'
-import { useInviteState } from '../../../social/services/InviteService'
-import { useDispatch } from '../../../store'
+import { InviteService, useInviteState } from '../../../social/services/InviteService'
 import { useAuthState } from '../../../user/services/AuthService'
-import { UserService } from '../../services/UserService'
-import { useUserState } from '../../services/UserService'
+import Search from '../../common/Search'
+import { UserService, useUserState } from '../../services/UserService'
 import InviteModel from './InviteModel'
 import ReceivedInvite from './ReceivedInvite'
-import Search from './searchInvites'
 import SentInvite from './SentInvite'
 import { inviteStyles } from './styles'
 
@@ -58,27 +55,28 @@ const useStyles = makeStyles((theme: Theme) => ({
   }
 }))
 
-interface Props {}
-
-const InvitesConsole = (props: Props) => {
+const InvitesConsole = () => {
   const classes = inviteStyles()
   const [refetch, setRefetch] = React.useState(false)
   const [value, setValue] = React.useState(0)
   const [inviteModelOpen, setInviteModelOpen] = React.useState(false)
+  const [search, setSearch] = React.useState('')
 
   const inviteState = useInviteState()
 
   const invites = inviteState.sentInvites.invites
   const adminUserState = useUserState()
-  const adminUsers = adminUserState.users.users
+  const adminUsers = adminUserState.users
   const user = useAuthState().user
-  const dispatch = useDispatch()
+
   const handleChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     setValue(newValue)
   }
+
   const openModelInvite = () => {
     setInviteModelOpen(true)
   }
+
   const closeModelInvite = () => {
     setInviteModelOpen(false)
   }
@@ -95,11 +93,11 @@ const InvitesConsole = (props: Props) => {
   }, [])
 
   useEffect(() => {
-    if (user?.id.value != null && (adminUserState.users.updateNeeded.value === true || refetch === true)) {
+    if (user?.id.value != null && (adminUserState.updateNeeded.value === true || refetch === true)) {
       UserService.fetchUsersAsAdmin()
     }
     setRefetch(false)
-  }, [useAuthState(), adminUserState.users.updateNeeded.value, refetch])
+  }, [useAuthState(), adminUserState.updateNeeded.value, refetch])
 
   useEffect(() => {
     if (inviteState.sentUpdateNeeded.value === true) {
@@ -113,12 +111,16 @@ const InvitesConsole = (props: Props) => {
     }
   }, [inviteState.sentUpdateNeeded.value])
 
+  const handleSearchChange = (e: any) => {
+    setSearch(e.target.value)
+  }
+
   return (
     <div>
       <ConfirmProvider>
         <Grid container spacing={3} className={classes.marginBottom}>
           <Grid item xs={9}>
-            <Search />
+            <Search text="invite" handleChange={handleSearchChange} />
           </Grid>
           <Grid item xs={3}>
             <Button variant="contained" className={classes.createBtn} type="submit" onClick={openModelInvite}>
@@ -138,12 +140,14 @@ const InvitesConsole = (props: Props) => {
               <Tab label="Sent Invite" {...a11yProps(1)} />
             </Tabs>
           </AppBar>
-          <TabPanel value={value} index={0}>
-            <ReceivedInvite invites={[]} />
-          </TabPanel>
-          <TabPanel value={value} index={1}>
-            <SentInvite invites={invites.value} />
-          </TabPanel>
+          <>
+            <TabPanel value={value} index={0}>
+              <ReceivedInvite invites={[]} />
+            </TabPanel>
+            <TabPanel value={value} index={1}>
+              <SentInvite invites={invites.value} />
+            </TabPanel>
+          </>
         </div>
       </ConfirmProvider>
       <InviteModel open={inviteModelOpen} handleClose={closeModelInvite} users={adminUsers.value} />
