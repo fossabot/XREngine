@@ -41,6 +41,11 @@ We believe that projects like this are extremely complex and difficult, and can 
 
 We are always hiring talented people who want to be leaders in what is to come. Inquire with anyone who seems like they know what's going on and they'll help you find who you need to talk to.
 
-### [Join our Discord](https://discord.gg/xrf)  [![Discord Chat](https://img.shields.io/discord/692672143053422678.svg)](https://discord.gg/xrf)
+### [Join our Discord](https://discord.gg/xrf)  [![Discord Chat](https://img.shields.io/discord/692672143053422678.svg)](https://discord.gg/xrf)[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmrhegemon%2FXREngine.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmrhegemon%2FXREngine?ref=badge_shield)
+
 
 ### [Sponsorship](https://opencollective.com/xrfoundation) [![Open Collective](https://opencollective.com/xrfoundation/tiers/badge.svg)](https://opencollective.com/xrfoundation)
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmrhegemon%2FXREngine.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmrhegemon%2FXREngine?ref=badge_large)
